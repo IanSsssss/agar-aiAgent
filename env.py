@@ -147,12 +147,12 @@ class AgarEnvironment(gym.Env):
     def __init__(self, config=None):  
         """初始化环境"""  
         self.config = config or {  
-            'gameWidth': 5000,  
-            'gameHeight': 5000,  
+            'gameWidth': 500,  
+            'gameHeight': 500,  
             'defaultPlayerMass': 20,  
             'fireFood': 10,  
             'limitSplit': 16,  
-            'maxFood': 1000,  
+            'maxFood': 500,  
             'maxViruses': 10,  
             'foodMass': 1,  
             'virusMass': 100,  
@@ -171,7 +171,7 @@ class AgarEnvironment(gym.Env):
           
         # 游戏状态  
         self.steps = 0  
-        self.max_steps = 2500  
+        self.max_steps = 20000  
         self.total_reward = 0  
           
         # 随机数生成器  
@@ -193,7 +193,7 @@ class AgarEnvironment(gym.Env):
         self._init_viruses(self.config['maxViruses'])  
           
         # 初始化其他玩家（简单AI）  
-        self._init_other_players(5)  # 5个其他玩家  
+        self._init_other_players(3)  # 5个其他玩家  
           
         # 初始化AI控制的玩家  
         spawn_point = self._generate_spawn_point()  
@@ -405,61 +405,48 @@ class AgarEnvironment(gym.Env):
             
             # 更新玩家总质量  
             player.massTotal = sum(cell.mass for cell in player.cells)  
-    
-    def _check_players_collision(self):  
-        """检查玩家之间的碰撞"""  
-        for i, player1 in enumerate(self.players + [self.agent_player]):  
-            for j, player2 in enumerate(self.players + [self.agent_player]):  
-                if i == j:  # 跳过自己  
-                    continue  
-                
-                # 检查两个玩家的所有细胞之间的碰撞  
-                for cell1 in player1.cells[:]:  # 创建副本以避免在迭代时修改  
-                    for cell2 in player2.cells[:]:  # 创建副本以避免在迭代时修改  
-                        # 计算距离  
-                        dist = math.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)  
-                        
-                        # 检查是否碰撞  
-                        if dist < cell1.radius + cell2.radius:  
-                            # 检查谁吃谁  
-                            if cell1.mass > cell2.mass * 1.1:  # 需要比对方大10%才能吃掉  
-                                # player1吃掉player2的细胞  
-                                cell1.mass += cell2.mass  
-                                cell1.radius = player1._mass_to_radius(cell1.mass)  
-                                player2.cells.remove(cell2)  
-                                
-                                # 如果player2没有细胞了，移除该玩家  
-                                if len(player2.cells) == 0 and player2 != self.agent_player:  
-                                    self.players.remove(player2)  
-                                elif len(player2.cells) == 0 and player2 == self.agent_player:  
-                                    # AI玩家死亡  
-                                    pass  
-                                
-                                # 更新玩家总质量  
-                                player1.massTotal = sum(c.mass for c in player1.cells)  
-                                player2.massTotal = sum(c.mass for c in player2.cells)  
-                                
-                                # 一旦吃掉一个细胞，跳出内层循环  
-                                break  
-                            
-                            elif cell2.mass > cell1.mass * 1.1:  # player2吃掉player1的细胞  
-                                # 类似的逻辑，但是反过来  
-                                cell2.mass += cell1.mass  
-                                cell2.radius = player2._mass_to_radius(cell2.mass)  
-                                player1.cells.remove(cell1)  
-                                
-                                if len(player1.cells) == 0 and player1 != self.agent_player:  
-                                    self.players.remove(player1)  
-                                elif len(player1.cells) == 0 and player1 == self.agent_player:  
-                                    # AI玩家死亡  
-                                    pass  
-                                
-                                player1.massTotal = sum(c.mass for c in player1.cells)  
-                                player2.massTotal = sum(c.mass for c in player2.cells)  
-                                
-                                # 跳出内层循环  
-                                break  
-    
+
+    def _check_players_collision(self):
+        """检查玩家之间的碰撞"""
+        cells_to_remove = []  # 延迟删除列表
+
+        for i, player1 in enumerate(self.players + [self.agent_player]):
+            for j, player2 in enumerate(self.players + [self.agent_player]):
+                if i == j:
+                    continue
+
+                for cell1 in player1.cells[:]:
+                    for cell2 in player2.cells[:]:
+                        dist = math.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+
+                        if dist < cell1.radius + cell2.radius:
+                            if cell1.mass > cell2.mass * 1.1:
+                                cell1.mass += cell2.mass
+                                cell1.radius = player1._mass_to_radius(cell1.mass)
+                                if cell2 in player2.cells:
+                                    player2.cells.remove(cell2)
+
+                                player1.massTotal = sum(c.mass for c in player1.cells)
+                                player2.massTotal = sum(c.mass for c in player2.cells)
+
+                                if len(player2.cells) == 0 and player2 != self.agent_player:
+                                    self.players.remove(player2)
+                                break
+
+                            elif cell2.mass > cell1.mass * 1.1:
+                                cell2.mass += cell1.mass
+                                cell2.radius = player2._mass_to_radius(cell2.mass)
+
+                                if cell1 in player1.cells:  # ✅ 安全检查
+                                    player1.cells.remove(cell1)
+
+                                player1.massTotal = sum(c.mass for c in player1.cells)
+                                player2.massTotal = sum(c.mass for c in player2.cells)
+
+                                if len(player1.cells) == 0 and player1 != self.agent_player:
+                                    self.players.remove(player1)
+                                break
+
     def _check_player_virus_collision(self, player):   
         viruses_to_remove = []  
         
@@ -514,26 +501,20 @@ class AgarEnvironment(gym.Env):
         if len(self.viruses) < self.config['maxViruses'] and self.rng.random() < 0.1:  
             self._init_viruses(1)  
     
-    def _calculate_reward(self, prev_mass):  
-        """计算奖励"""  
-        # 基础奖励：质量变化  
-        mass_reward = self.agent_player.massTotal - prev_mass  
-        
-        # 存活奖励：每步给予小的正奖励  
-        survival_reward = 0.01  
-        
-        # 排名奖励：根据玩家在所有玩家中的排名给予奖励  
-        all_players = self.players + [self.agent_player]  
-        all_players.sort(key=lambda p: p.massTotal, reverse=True)  
-        
-        rank = all_players.index(self.agent_player)  
-        rank_reward = (len(all_players) - rank) / len(all_players) * 0.1  
-        
-        # 总奖励  
-        total_reward = mass_reward + survival_reward + rank_reward  
-        
-        return total_reward  
-    
+    def _calculate_reward(self, prev_mass):
+        """改进版奖励函数"""
+
+        reward = 0.0
+
+        # 成长奖励：每增长 1 点质量，奖励 0.2（你可以调成 1.0 看更快反馈）
+        delta_mass = self.agent_player.massTotal - prev_mass
+        reward += delta_mass * 0.5
+
+        # 存活奖励：每一步都给 0.05
+        reward += 0.05
+
+        return reward
+
     def _is_done(self):  
         """检查游戏是否结束"""  
         # 游戏结束条件：  
