@@ -1,5 +1,5 @@
 from stable_baselines3 import PPO
-from demo import AgarEnvironment  # 确保 demo.py 中有 AgarEnvironment 类
+from env import AgarEnvironment
 from stable_baselines3.common.vec_env import DummyVecEnv
 import os
 

@@ -460,8 +460,7 @@ class AgarEnvironment(gym.Env):
                                 # 跳出内层循环  
                                 break  
     
-    def _check_player_virus_collision(self, player):  
-        """检查玩家与病毒的碰撞"""  
+    def _check_player_virus_collision(self, player):   
         viruses_to_remove = []  
         
         for i, virus in enumerate(self.viruses):  

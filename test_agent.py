@@ -1,25 +1,23 @@
-from stable_baselines3 import PPO
-from demo import AgarEnvironment
+from agent import AIAgent
+from env import AgarEnvironment
 import time
 
-# 加载环境和模型
+agent = AIAgent("models/ppo_agar_agent.zip")
 env = AgarEnvironment()
-model = PPO.load("models/ppo_agar_agent")
 
-obs = env.reset()
+obs = env.reset()  # ✅ 已经是 np.array，不是 dict
 done = False
 total_reward = 0
 step = 0
 
 while not done:
-    action, _states = model.predict(obs, deterministic=True)
+    action = agent.act(obs)  # ✅ 直接传给 agent
     obs, reward, done, info = env.step(action)
     total_reward += reward
     step += 1
 
-    # 可视化调试输出
-    print(f"Step: {step} | Reward: {reward:.2f} | Total Mass: {info['player_mass']:.2f}")
+    print(f"Step: {step} | Action: {action} | Reward: {reward:.2f} | Mass: {info['player_mass']:.2f}")
     env.render()
-    time.sleep(0.1)  # 控制打印节奏
+    time.sleep(0.05)
 
-print(f"✅ 测试完成，总奖励: {total_reward:.2f}")
+print(f"\n✅ AI 玩完一局，总奖励: {total_reward:.2f}")
