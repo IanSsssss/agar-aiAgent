@@ -76,7 +76,22 @@ class Player:
         self.y = y_sum / len(self.cells)
         if hasattr(self, 'temp_target'):
             del self.temp_target 
-      
+    
+    def move_with_direction(self, direction, slow_base, game_width, game_height):
+        dx, dy = direction
+        norm = math.sqrt(dx * dx + dy * dy) + 1e-6
+        dx /= norm
+        dy /= norm
+
+        for cell in self.cells:
+            speed = max(slow_base, 6.25 / math.sqrt(cell.mass))
+            cell.x += dx * speed
+            cell.y += dy * speed
+            cell.x = max(cell.radius, min(game_width - cell.radius, cell.x))
+            cell.y = max(cell.radius, min(game_height - cell.radius, cell.y))
+        self.x = sum(c.x for c in self.cells) / len(self.cells)
+        self.y = sum(c.y for c in self.cells) / len(self.cells)
+
     def split(self, limit_split, min_mass):  
         """玩家分裂"""  
         if len(self.cells) >= limit_split:  
@@ -238,12 +253,28 @@ class AgarEnvironment(gym.Env):
         target_x_rel, target_y_rel, split, eject = action  
           
         # 将相对坐标转换为绝对坐标  
-        view_distance = 1000  # 视野范围  
-        target_x = self.agent_player.x + target_x_rel * view_distance  
-        target_y = self.agent_player.y + target_y_rel * view_distance  
+        view_distance = 3000  # 视野范围  
+        # target_x = self.agent_player.x + target_x_rel * view_distance  
+        # target_y = self.agent_player.y + target_y_rel * view_distance  
           
-        # 更新玩家目标  
-        self.agent_player.temp_target = {'x': target_x, 'y': target_y}
+        # # 更新玩家目标  
+        # self.agent_player.temp_target = {'x': target_x, 'y': target_y}
+
+        direction = [target_x_rel, target_y_rel]
+        self.agent_player.move_with_direction(
+            direction,
+            self.config['slowBase'],
+            self.config['gameWidth'],
+            self.config['gameHeight']
+        )
+
+        direction = [target_x_rel, target_y_rel]
+        self.agent_player.move_with_direction(
+            direction,
+            self.config['slowBase'],
+            self.config['gameWidth'],
+            self.config['gameHeight']
+        )
         self.last_action = [target_x_rel, target_y_rel, split, eject]
           
         # 处理分裂  
