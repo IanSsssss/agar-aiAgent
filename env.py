@@ -147,12 +147,12 @@ class AgarEnvironment(gym.Env):
     def __init__(self, config=None):  
         """初始化环境"""  
         self.config = config or {  
-            'gameWidth': 500,  
-            'gameHeight': 500,  
+            'gameWidth': 5000,  
+            'gameHeight': 5000,  
             'defaultPlayerMass': 20,  
             'fireFood': 10,  
             'limitSplit': 16,  
-            'maxFood': 500,  
+            'maxFood': 1500,  
             'maxViruses': 10,  
             'foodMass': 1,  
             'virusMass': 100,  
@@ -171,7 +171,7 @@ class AgarEnvironment(gym.Env):
           
         # 游戏状态  
         self.steps = 0  
-        self.max_steps = 20000  
+        self.max_steps = 30000  
         self.total_reward = 0  
           
         # 随机数生成器  
@@ -534,7 +534,7 @@ class AgarEnvironment(gym.Env):
 
         # 成长奖励：每增长 1 点质量，奖励 0.2（你可以调成 1.0 看更快反馈）
         delta_mass = self.agent_player.massTotal - prev_mass
-        reward += delta_mass * 0.5
+        reward += delta_mass * 1
 
         # 存活奖励：每一步都给 0.05
         reward += 0.05
