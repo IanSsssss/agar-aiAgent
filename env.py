@@ -45,8 +45,9 @@ class Player:
         y_sum = 0  
         for cell in self.cells:  
             # 简化的移动逻辑  
-            dx = self.target['x'] - cell.x  
-            dy = self.target['y'] - cell.y  
+            target = getattr(self, 'temp_target', self.target if hasattr(self, 'target') else {'x': self.x, 'y': self.y})
+            dx = target['x'] - cell.x
+            dy = target['y'] - cell.y
               
             dist = math.sqrt(dx * dx + dy * dy)  
             if dist < 1:  
@@ -72,7 +73,9 @@ class Player:
           
         # 更新玩家位置为所有细胞的平均位置  
         self.x = x_sum / len(self.cells)  
-        self.y = y_sum / len(self.cells)  
+        self.y = y_sum / len(self.cells)
+        if hasattr(self, 'temp_target'):
+            del self.temp_target 
       
     def split(self, limit_split, min_mass):  
         """玩家分裂"""  
@@ -176,7 +179,7 @@ class AgarEnvironment(gym.Env):
           
         # 随机数生成器  
         self.rng = np.random.RandomState()
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(22,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(26,), dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-1, -1, 0, 0]), high=np.array([1, 1, 1, 1]), dtype=np.float32)
       
     def reset(self):  
@@ -240,7 +243,8 @@ class AgarEnvironment(gym.Env):
         target_y = self.agent_player.y + target_y_rel * view_distance  
           
         # 更新玩家目标  
-        self.agent_player.target = {'x': target_x, 'y': target_y}  
+        self.agent_player.temp_target = {'x': target_x, 'y': target_y}
+        self.last_action = [target_x_rel, target_y_rel, split, eject]
           
         # 处理分裂  
         if split > 0.5:  # 二值化  
@@ -581,5 +585,10 @@ class AgarEnvironment(gym.Env):
             obs.extend([dx, dy, dm])
         while len(obs) < 3 + 5*2 + 3*3:
             obs.extend([0, 0, 0])
+
+        if hasattr(self, 'last_action'):
+            obs.extend(self.last_action)
+        else:
+            obs.extend([0.0, 0.0, 0.0, 0.0])
 
         return np.array(obs, dtype=np.float32)
